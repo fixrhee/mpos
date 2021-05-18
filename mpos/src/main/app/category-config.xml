@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="CategoryServiceImpl" class="com.jpa.mpos.processor.CategoryHandler" />
+	</spring:beans>
+
+
+	<flow name="category-getAllFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="category" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<choice>
+			<when expression="#[flowVars['uid'] == null]">
+				<set-variable value="NA" variableName="uid" />
+			</when>
+			<otherwise>
+				<set-variable value="#[flowVars['uid']]" variableName="uid" />
+			</otherwise>
+		</choice>
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != '']" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != '']" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getAllCategory"
+			methodArguments="#[message.inboundProperties.'http.query.params'.currentPage], #[message.inboundProperties.'http.query.params'.pageSize], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="CategoryServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="category-createFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="category" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['description'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createCategory"
+			methodArguments="#[payload.name], #[payload.description], #[flowVars['token']]"
+			object-ref="CategoryServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="category-updateFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="category/{categoryID}" allowedMethods="PUT" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.categoryID != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['description'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="updateCategory"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.categoryID], #[payload.name], #[payload.description], #[flowVars['token']]"
+			object-ref="CategoryServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+
+	<flow name="category-deleteFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="category/{categoryID}" allowedMethods="DELETE" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.categoryID != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="deleteCategory"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.categoryID], #[flowVars['token']]"
+			object-ref="CategoryServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+</mule>

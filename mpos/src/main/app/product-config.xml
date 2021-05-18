@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="ProductServiceImpl" class="com.jpa.mpos.processor.ProductHandler" />
+	</spring:beans>
+
+	<flow name="product-getAllFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<choice>
+			<when expression="#[flowVars['uid'] == null]">
+				<set-variable value="NA" variableName="uid" />
+			</when>
+			<otherwise>
+				<set-variable value="#[flowVars['uid']]" variableName="uid" />
+			</otherwise>
+		</choice>
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != '']" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != '']" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getAllProduct"
+			methodArguments="#[message.inboundProperties.'http.query.params'.currentPage], #[message.inboundProperties.'http.query.params'.pageSize], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="product-getByCategoryFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product/category/{categoryID}" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<choice>
+			<when expression="#[flowVars['uid'] == null]">
+				<set-variable value="NA" variableName="uid" />
+			</when>
+			<otherwise>
+				<set-variable value="#[flowVars['uid']]" variableName="uid" />
+			</otherwise>
+		</choice>
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.categoryID != null]" />
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.currentPage != '']" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.pageSize != '']" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getProductByCategory"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.categoryID], #[message.inboundProperties.'http.query.params'.currentPage], #[message.inboundProperties.'http.query.params'.pageSize], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="product-getByIDFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product/{productID}" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<choice>
+			<when expression="#[flowVars['uid'] == null]">
+				<set-variable value="NA" variableName="uid" />
+			</when>
+			<otherwise>
+				<set-variable value="#[flowVars['uid']]" variableName="uid" />
+			</otherwise>
+		</choice>
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.productID != null]" />
+				<expression-filter expression="#[flowVars['token'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getProductByID"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.productID], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="product-getBySKUFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product/sku/{sku}" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<choice>
+			<when expression="#[flowVars['uid'] == null]">
+				<set-variable value="NA" variableName="uid" />
+			</when>
+			<otherwise>
+				<set-variable value="#[flowVars['uid']]" variableName="uid" />
+			</otherwise>
+		</choice>
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.sku != null]" />
+				<expression-filter expression="#[flowVars['token'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getProductBySKU"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.sku], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="product-createFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload['categoryID'] != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['sku'] != null]" />
+				<expression-filter expression="#[payload['description'] != null]" />
+				<expression-filter expression="#[payload['price'] != null]" />
+				<expression-filter expression="#[payload['strikePrice'] != null]" />
+				<expression-filter expression="#[payload['publishPrice'] != null]" />
+				<expression-filter expression="#[payload['image'] != null]" />
+				<expression-filter expression="#[payload['publish'] != null]" />
+				<expression-filter expression="#[payload['stock'] != null]" />
+				<expression-filter expression="#[payload['lowStockThreshold'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createProduct"
+			methodArguments="#[payload.categoryID], #[payload.name], #[payload.sku], #[payload.description], #[payload.price], #[payload.strikePrice], #[payload.publishPrice], #[payload.image], #[payload.stock], #[payload.lowStockThreshold], #[payload.publish], #[flowVars['token']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="product-updateFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product/{productID}" allowedMethods="PUT" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.productID != null]" />
+				<expression-filter expression="#[payload['categoryID'] != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['sku'] != null]" />
+				<expression-filter expression="#[payload['description'] != null]" />
+				<expression-filter expression="#[payload['price'] != null]" />
+				<expression-filter expression="#[payload['strikePrice'] != null]" />
+				<expression-filter expression="#[payload['publishPrice'] != null]" />
+				<expression-filter expression="#[payload['image'] != null]" />
+				<expression-filter expression="#[payload['publish'] != null]" />
+				<expression-filter expression="#[payload['stock'] != null]" />
+				<expression-filter expression="#[payload['lowStockThreshold'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="updateProduct"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.productID], #[payload.categoryID], #[payload.name], #[payload.sku], #[payload.description], #[payload.price], #[payload.strikePrice], #[payload.publishPrice], #[payload.image], #[payload.stock], #[payload.lowStockThreshold], #[payload.publish], #[flowVars['token']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+
+	<flow name="product-deleteFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="product/{productID}" allowedMethods="DELETE" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.productID != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="deleteProduct"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.productID], #[flowVars['token']]"
+			object-ref="ProductServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+</mule>

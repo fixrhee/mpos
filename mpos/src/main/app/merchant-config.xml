@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="MerchantServiceImpl" class="com.jpa.mpos.processor.MerchantHandler" />
+	</spring:beans>
+
+	<flow name="merchant-loginFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="merchant/token" allowedMethods="POST" doc:name="HTTP" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[payload.username != null]" />
+				<expression-filter expression="#[payload.password != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createJWTHMAC256" methodArguments="#[payload.username], #[payload.password]"
+			object-ref="MerchantServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="member-getInfoFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="merchant" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<expression-filter expression="#[flowVars['token'] != null]" />
+		</message-filter>
+		<invoke method="getMerchantInfo" methodArguments="#[flowVars['token']]"
+			object-ref="MerchantServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+</mule>

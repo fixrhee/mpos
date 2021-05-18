@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="InvoiceServiceImpl" class="com.jpa.mpos.processor.InvoiceHandler" />
+	</spring:beans>
+
+
+	<flow name="invoice-createFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="invoice" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<set-variable value="#[message.inboundProperties.'x-uid']"
+			variableName="uid" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[message.inboundProperties.'x-uid'] != null]" />
+				<expression-filter expression="#[payload['orderToken'] != null]" />
+				<expression-filter expression="#[payload['channelID'] != null]" />
+			</and-filter>
+		</message-filter>
+		<choice>
+			<when expression="#[payload.name == null]">
+				<set-variable value="" variableName="name" />
+			</when>
+			<otherwise>
+				<set-variable value="#[payload.name]" variableName="name" />
+			</otherwise>
+		</choice>
+		<choice>
+			<when expression="#[payload.email == null]">
+				<set-variable value="" variableName="email" />
+			</when>
+			<otherwise>
+				<set-variable value="#[payload.email]" variableName="email" />
+			</otherwise>
+		</choice>
+		<choice>
+			<when expression="#[payload.msisdn == null]">
+				<set-variable value="" variableName="msisdn" />
+			</when>
+			<otherwise>
+				<set-variable value="#[payload.msisdn]" variableName="msisdn" />
+			</otherwise>
+		</choice>
+		<choice>
+			<when expression="#[payload.address == null]">
+				<set-variable value="" variableName="address" />
+			</when>
+			<otherwise>
+				<set-variable value="#[payload.address]" variableName="address" />
+			</otherwise>
+		</choice>
+		<invoke method="createInvoice"
+			methodArguments="#[payload['orderToken']], #[payload['channelID']], #[flowVars['name']], #[flowVars['email']], #[flowVars['msisdn']], #[flowVars['address']], #[flowVars['token']], #[flowVars['uid']]"
+			object-ref="InvoiceServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="invoice-getFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="invoice/${invoiceNo}" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.invoiceNo != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getInvoiceByNo" methodArguments="#[message.inboundProperties.'http.uri.params'.invoiceNo], #[flowVars['token']], "
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+</mule>

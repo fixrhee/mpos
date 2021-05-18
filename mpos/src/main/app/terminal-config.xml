@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="TerminalServiceImpl" class="com.jpa.mpos.processor.TerminalHandler" />
+	</spring:beans>
+
+	<flow name="terminal-loginFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal/login" allowedMethods="POST" doc:name="HTTP" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[payload.username != null]" />
+				<expression-filter expression="#[payload.password != null]" />
+				<expression-filter expression="#[payload.uid != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createJWTHMAC256"
+			methodArguments="#[payload.username], #[payload.password], #[payload.uid]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="terminal-getInfoByIDFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal/{terminalID}" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<expression-filter expression="#[flowVars['token'] != null]" />
+		</message-filter>
+		<invoke method="getTerminalInfo"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.terminalID], #[flowVars['token']]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="terminal-getInfoFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<expression-filter expression="#[flowVars['token'] != null]" />
+		</message-filter>
+		<invoke method="getTerminalInfo" methodArguments="#[flowVars['token']]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="terminal-createFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload['terminalRefID'] != null]" />
+				<expression-filter expression="#[payload['nns'] != null]" />
+				<expression-filter expression="#[payload['username'] != null]" />
+				<expression-filter expression="#[payload['password'] != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['address'] != null]" />
+				<expression-filter expression="#[payload['msisdn'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createTerminal"
+			methodArguments="#[payload.terminalRefID], #[payload.nns], #[payload.username], #[payload.password], #[payload.name], #[payload.address], #[payload.msisdn], #[flowVars['token']]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="terminal-updateFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal/{terminalID}" allowedMethods="PUT" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.terminalID != null]" />
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload['terminalRefID'] != null]" />
+				<expression-filter expression="#[payload['nns'] != null]" />
+				<expression-filter expression="#[payload['username'] != null]" />
+				<expression-filter expression="#[payload['password'] != null]" />
+				<expression-filter expression="#[payload['name'] != null]" />
+				<expression-filter expression="#[payload['address'] != null]" />
+				<expression-filter expression="#[payload['msisdn'] != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="updateTerminal"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.terminalID], #[payload.terminalRefID],  #[payload.nns], #[payload.username], #[payload.password], #[payload.name], #[payload.address], #[payload.msisdn], #[flowVars['token']]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="terminal-deleteFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="terminal/{terminalID}" allowedMethods="DELETE" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.terminalID != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="deleteTerminal"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.terminalID], #[flowVars['token']]"
+			object-ref="TerminalServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+</mule>

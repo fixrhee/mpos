@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:bean id="OrderServiceImpl" class="com.jpa.mpos.processor.OrderHandler" />
+	</spring:beans>
+
+	<flow name="order-getAllFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.query.params'.terminalID != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="getAllOrder"
+			methodArguments="#[message.inboundProperties.'http.query.params'.terminalID], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-getTokenFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order/token" allowedMethods="GET" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<expression-filter expression="#[flowVars['token'] != null]" />
+		</message-filter>
+		<invoke method="getOrderToken" methodArguments="#[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-createFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload.orderToken != null]" />
+				<expression-filter expression="#[payload.productID != null]" />
+				<expression-filter expression="#[payload.notes != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="createOrder"
+			methodArguments="#[payload.orderToken], #[payload.productID], #[payload.quantity], #[payload.notes], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-inquiryFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order/inquiry" allowedMethods="POST" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload.orderToken != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="inquiryOrder" methodArguments="#[payload.orderToken], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-updateFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order/{orderID}" allowedMethods="PUT" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.orderID != null]" />
+				<expression-filter expression="#[payload.quantity != null]" />
+				<expression-filter expression="#[payload.notes!= null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="updateOrder"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.orderID], #[payload.quantity], #[payload.notes], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-deleteProductFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order/{orderID}" allowedMethods="DELETE" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter
+					expression="#[message.inboundProperties.'http.uri.params'.orderID != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="deleteProductFromOrder"
+			methodArguments="#[message.inboundProperties.'http.uri.params'.orderID], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+
+	<flow name="order-deleteFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="order" allowedMethods="DELETE" doc:name="HTTP" />
+		<set-variable
+			value="#[org.apache.commons.lang.StringUtils.substring(message.inboundProperties.authorization,7)]"
+			variableName="token" />
+		<message-filter onUnaccepted="invalidParameterFlow"
+			doc:name="Message">
+			<and-filter doc:name="And">
+				<expression-filter expression="#[flowVars['token'] != null]" />
+				<expression-filter expression="#[payload.orderToken != null]" />
+			</and-filter>
+		</message-filter>
+		<invoke method="deleteOrder"
+			methodArguments="#[payload.orderToken], #[flowVars['token']]"
+			object-ref="OrderServiceImpl" />
+		<flow-ref name="responseFlow" />
+	</flow>
+</mule>
